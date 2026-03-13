@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeGruad | Cyberbullying Detection</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body{
+background:linear-gradient(120deg,#0f2027,#203a43,#2c5364);
+font-family:'Segoe UI';
+color:white;
+min-height:100vh;
+}
+
+.hero{
+text-align:center;
+padding:40px;
+}
+
+.card-ui{
+background:white;
+color:black;
+border-radius:12px;
+padding:30px;
+box-shadow:0px 10px 30px rgba(0,0,0,0.4);
+}
+
+.analyze-btn{
+background:linear-gradient(45deg,#ff5f6d,#ffc371);
+border:none;
+font-size:18px;
+padding:12px 25px;
+border-radius:8px;
+color:white;
+margin:5px;
+cursor:pointer;
+}
+
+.keyword{
+background:#ffb3b3;
+padding:6px 10px;
+margin:5px;
+border-radius:6px;
+display:inline-block;
+font-weight:bold;
+}
+
+.output-box{
+max-height:200px;
+overflow-y:auto;
+border:1px solid #ddd;
+padding:10px;
+}
+
+.score{
+font-size:50px;
+font-weight:bold;
+color:#ff5f6d;
+}
+
+textarea{
+resize:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="hero">
+<h1>Cyber Guard</h1>
+<p>Cyberbullying Detection System</p>
+</div>
+
+<div class="container">
+<div class="row">
+
+<div class="col-md-6">
+<div class="card-ui">
+
+<h4> Voice Detection</h4>
+
+<button class="analyze-btn" onclick="startMic()">Start Listening</button>
+<button class="analyze-btn" onclick="stopMic()">Stop Listening</button>
+
+<hr>
+
+<h4>Text Detection</h4>
+
+<textarea id="textInput" class="form-control" rows="3"
+placeholder="Enter text to analyze"></textarea>
+
+<br>
+
+<button class="analyze-btn" onclick="analyzeText()">
+Analyze Text
+</button>
+
+<hr>
+
+<h4>Upload Dataset</h4>
+
+<input type="file" id="datasetFile" class="form-control">
+
+<br>
+
+<button class="analyze-btn" onclick="analyzeDataset()">
+Analyze Dataset
+</button>
+
+<hr>
+
+<h4>Detected Bullying Keywords</h4>
+
+<div id="keywords" class="output-box"></div>
+
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="card-ui">
+
+<h4>Cyberbullying Risk Score</h4>
+
+<div class="score" id="riskScore">0%</div>
+
+<hr>
+
+<h5>Total Bullying Words Found</h5>
+
+<div id="count">0 bullying words detected</div>
+
+<hr>
+
+<h5>Speech/Text Output</h5>
+
+<div id="speechOutput"></div>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const bullyWords = [
+"stupid","idiot","loser","ugly","hate","kill","worthless",
+"moron","dumb","trash","pathetic","fool","shut","bitch",
+"asshole","jerk","retard","scum","garbage","rubbish",
+"bastard","fuck","shit","crybaby"
+];
+
+let recognition;
+let active = false;
+
+/* ---------------- VOICE DETECTION ---------------- */
+
+function startMic(){
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+recognition = new SpeechRecognition();
+
+recognition.lang="en-US";
+recognition.continuous=true;
+recognition.interimResults=true;
+
+recognition.start();
+active=true;
+
+recognition.onresult=function(event){
+
+let text="";
+
+for(let i=0;i<event.results.length;i++){
+
+text+=event.results[i][0].transcript+" ";
+
+}
+
+text=normalize(text);
+
+document.getElementById("speechOutput").innerText=text;
+
+detectBullying(text);
+
+};
+
+}
+
+function stopMic(){
+
+if(recognition && active){
+recognition.stop();
+active=false;
+}
+
+}
+
+/* ---------------- TEXT INPUT ---------------- */
+
+function analyzeText(){
+
+let text=document.getElementById("textInput").value;
+
+text=normalize(text);
+
+document.getElementById("speechOutput").innerText=text;
+
+detectBullying(text);
+
+}
+
+/* ---------------- DATASET FILE ---------------- */
+
+function analyzeDataset(){
+
+let file=document.getElementById("datasetFile").files[0];
+
+if(!file){
+
+alert("Please upload dataset");
+
+return;
+
+}
+
+let reader=new FileReader();
+
+reader.onload=function(e){
+
+let text=e.target.result;
+
+text=normalize(text);
+
+document.getElementById("speechOutput").innerText=text.substring(0,200)+"...";
+
+detectBullying(text);
+
+};
+
+reader.readAsText(file);
+
+}
+
+/* ---------------- TEXT CLEANING ---------------- */
+
+function normalize(text){
+
+text=text.toLowerCase();
+
+text=text.replace(/[^\w\s]/g,"");
+
+return text;
+
+}
+
+/* ---------------- BULLY DETECTION ---------------- */
+
+function detectBullying(sentence){
+
+let tokens=sentence.split(/\s+/);
+
+let detected=[];
+
+tokens.forEach(word=>{
+
+bullyWords.forEach(b=>{
+
+if(word===b || word.includes(b)){
+
+detected.push(b);
+
+}
+
+});
+
+});
+
+displayResults(detected);
+
+}
+
+/* ---------------- OUTPUT DISPLAY ---------------- */
+
+function displayResults(found){
+
+let keywordBox=document.getElementById("keywords");
+
+keywordBox.innerHTML="";
+
+let unique=[...new Set(found)];
+
+unique.forEach(word=>{
+
+let span=document.createElement("span");
+
+span.className="keyword";
+
+span.innerText=word;
+
+keywordBox.appendChild(span);
+
+});
+
+document.getElementById("count").innerText=
+found.length+" bullying words detected";
+
+let risk=Math.min(found.length*20,100);
+
+document.getElementById("riskScore").innerText=risk+"%";
+
+}
+
+</script>
+
+</body>
+</html>
